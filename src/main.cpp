@@ -3,7 +3,18 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#define PI 3.14
+#include <vector>
+
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
+
+#include "Face.h"
+#include "Group.h"
+#include "Mesh.h"
+#include "Obj3D.h"
+
+using namespace std;
+using namespace glm;
 
 int main() {
     if (!glfwInit()) {
@@ -36,28 +47,110 @@ int main() {
     printf("OpenGL version: %s\n", version);
 
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+    glDepthFunc(GL_ALWAYS);
 
-//    GLuint vbo = 0;
-//    glGenBuffers(1, &vbo);
-//    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-//    glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(GLfloat), points, GL_STATIC_DRAW);
-//
-//    GLuint colorsVBO = 0;
-//    glGenBuffers(1, &colorsVBO);
-//    glBindBuffer(GL_ARRAY_BUFFER, colorsVBO);
-//    glBufferData(GL_ARRAY_BUFFER, 9 * sizeof(GLfloat), colors, GL_STATIC_DRAW);
-//
-//    GLuint vao = 0;
-//    glGenVertexArrays(1, &vao);
-//    glBindVertexArray(vao);
-//    glEnableVertexAttribArray(0);
-//    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-//    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-//
-//    glEnableVertexAttribArray(1);
-//    glBindBuffer(GL_ARRAY_BUFFER, colorsVBO);
-//    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    Mesh *mesh = new Mesh();
+
+    mesh->addVertex(new glm::vec3(-0.5f, -0.5f, 0.0f));  //A 0
+    mesh->addVertex(new glm::vec3(0.5f, -0.5f, 0.0f));   //B 1
+    mesh->addVertex(new glm::vec3(-0.5f, 0.5f, 0.0f));   //C 2
+    mesh->addVertex(new glm::vec3(0.5f, 0.5f, 0.0f));    //D 3
+    mesh->addVertex(new glm::vec3(-0.5f, 0.5f, 1.0f));  //E 4
+    mesh->addVertex(new glm::vec3(0.5f, 0.5f, 1.0f));   //F 5
+    mesh->addVertex(new glm::vec3(-0.5f, -0.5f, 1.0f)); //G 6
+    mesh->addVertex(new glm::vec3(0.5f, -0.5f, 1.0f));   //H 7
+
+    Face *f1 = new Face();
+    f1->addVert(0);
+    f1->addVert(1);
+    f1->addVert(2);
+    f1->addVert(2);
+    f1->addVert(3);
+    f1->addVert(1);
+
+    Face *f2 = new Face();
+    f2->addVert(6);
+    f2->addVert(7);
+    f2->addVert(4);
+    f2->addVert(4);
+    f2->addVert(5);
+    f2->addVert(7);
+
+    Face *f3 = new Face();
+    f3->addVert(0);
+    f3->addVert(6);
+    f3->addVert(2);
+    f3->addVert(2);
+    f3->addVert(4);
+    f3->addVert(0);
+
+    Face * f4 = new Face();
+    f4->addVert(0);
+    f4->addVert(1);
+    f4->addVert(6);
+    f4->addVert(6);
+    f4->addVert(7);
+    f4->addVert(1);
+
+    Face * f5 = new Face();
+    f5->addVert(2);
+    f5->addVert(3);
+    f5->addVert(4);
+    f5->addVert(4);
+    f5->addVert(5);
+    f5->addVert(3);
+
+    Face * f6 = new Face();
+    f6->addVert(1);
+    f6->addVert(7);
+    f6->addVert(3);
+    f6->addVert(3);
+    f6->addVert(5);
+    f6->addVert(7);
+
+    Group *group = new Group();
+
+    group->addFace(f1);
+    group->addFace(f2);
+    group->addFace(f3);
+    group->addFace(f4);
+    group->addFace(f5);
+    group->addFace(f6);
+
+    mesh->addGroup(group);
+
+    for (Group *g : mesh->getGroups()) {
+        vector<float> vs;
+        for (Face *f : g->getFaces()) {
+            for (int idx : f->getVerts()) {
+                glm::vec3 *vertex = mesh->getVertices()[idx];
+
+                vs.push_back(vertex->x);
+                vs.push_back(vertex->y);
+                vs.push_back(vertex->z);
+            }
+        }
+        GLuint vbo, vao;
+        glGenBuffers(1, &vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, vs.size() * sizeof(float), vs.data(), GL_STATIC_DRAW);
+
+        glGenVertexArrays(1, &vao);
+        glBindVertexArray(vao);
+
+        glEnableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+        g->setVAO(vao);
+    }
+
+    glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
+
+    Obj3D *obj = new Obj3D();
+
+    obj->setMesh(mesh);
 
     const char *vertex_shader =
             "#version 410\n"
@@ -92,16 +185,17 @@ int main() {
     glBindAttribLocation(shader_programme, 1, "vc");
     glLinkProgram(shader_programme);
 
-    int matrixLocation = glGetUniformLocation(shader_programme, "matrix");
-
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(shader_programme);
 
-//        glBindVertexArray(vao);
+        Mesh *m = obj->getMesh();
 
-//        glDrawArrays(GL_TRIANGLES, 0, 3);
+        for (Group *g : m->getGroups()) {
+            glBindVertexArray(g->getVAO());
+            glDrawArrays(GL_TRIANGLES, 0, g->getNumOfVertices());
+        }
 
         glfwPollEvents();
 
