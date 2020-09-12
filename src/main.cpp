@@ -5,13 +5,18 @@
 
 #include <vector>
 
-#include "glm/vec2.hpp"
-#include "glm/vec3.hpp"
+#include "glm/ext.hpp"
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include <glm/gtc/type_ptr.hpp>
 
 #include "Face.h"
 #include "Group.h"
 #include "Mesh.h"
 #include "Obj3D.h"
+
+#define WIDTH 1980
+#define HEIGHT 1024
 
 using namespace std;
 using namespace glm;
@@ -27,7 +32,7 @@ int main() {
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow *window = glfwCreateWindow(1980, 1024, "computacao-grafica-ga", NULL, NULL);
+    GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "computacao-grafica-ga", NULL, NULL);
 
     if (!window) {
         fprintf(stderr, "ERROR: could not open window with GLFW3\n");
@@ -47,18 +52,32 @@ int main() {
     printf("OpenGL version: %s\n", version);
 
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_ALWAYS);
+    glClear(GL_LESS);
+
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraDirection = glm::normalize(cameraTarget - cameraPos);
+    glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+    glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
+
+    glm::mat4 view(1.0f);
+    view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+
+    glm::mat4 proj = glm::mat4(1.0f);
+    proj = glm::perspective(glm::radians(60.0f), (float) WIDTH / (float) HEIGHT, 0.1f, 100.0f);
 
     Mesh *mesh = new Mesh();
 
-    mesh->addVertex(new glm::vec3(-0.5f, -0.5f, 0.0f));  //A 0
-    mesh->addVertex(new glm::vec3(0.5f, -0.5f, 0.0f));   //B 1
-    mesh->addVertex(new glm::vec3(-0.5f, 0.5f, 0.0f));   //C 2
-    mesh->addVertex(new glm::vec3(0.5f, 0.5f, 0.0f));    //D 3
-    mesh->addVertex(new glm::vec3(-0.5f, 0.5f, 1.0f));  //E 4
-    mesh->addVertex(new glm::vec3(0.5f, 0.5f, 1.0f));   //F 5
-    mesh->addVertex(new glm::vec3(-0.5f, -0.5f, 1.0f)); //G 6
-    mesh->addVertex(new glm::vec3(0.5f, -0.5f, 1.0f));   //H 7
+    mesh->addVertex(new glm::vec3(-0.5f, -0.5f, 0.5f));  //A 0
+    mesh->addVertex(new glm::vec3(0.5f, -0.5f, 0.5f));   //B 1
+    mesh->addVertex(new glm::vec3(-0.5f, 0.5f, 0.5f));   //C 2
+    mesh->addVertex(new glm::vec3(0.5f, 0.5f, 0.5f));    //D 3
+    mesh->addVertex(new glm::vec3(-0.5f, 0.5f, -0.5f));  //E 4
+    mesh->addVertex(new glm::vec3(0.5f, 0.5f, -0.5f));   //F 5
+    mesh->addVertex(new glm::vec3(-0.5f, -0.5f, -0.5f)); //G 6
+    mesh->addVertex(new glm::vec3(0.5f, -0.5f, -0.5f));   //H 7
 
     Face *f1 = new Face();
     f1->addVert(0);
@@ -84,7 +103,7 @@ int main() {
     f3->addVert(4);
     f3->addVert(0);
 
-    Face * f4 = new Face();
+    Face *f4 = new Face();
     f4->addVert(0);
     f4->addVert(1);
     f4->addVert(6);
@@ -92,7 +111,7 @@ int main() {
     f4->addVert(7);
     f4->addVert(1);
 
-    Face * f5 = new Face();
+    Face *f5 = new Face();
     f5->addVert(2);
     f5->addVert(3);
     f5->addVert(4);
@@ -100,7 +119,7 @@ int main() {
     f5->addVert(5);
     f5->addVert(3);
 
-    Face * f6 = new Face();
+    Face *f6 = new Face();
     f6->addVert(1);
     f6->addVert(7);
     f6->addVert(3);
@@ -146,8 +165,6 @@ int main() {
         g->setVAO(vao);
     }
 
-    glClearColor(0.2f, 0.3f, 0.4f, 1.0f);
-
     Obj3D *obj = new Obj3D();
 
     obj->setMesh(mesh);
@@ -155,11 +172,9 @@ int main() {
     const char *vertex_shader =
             "#version 410\n"
             "layout(location=0) in vec3 vp;"
-            "layout(location=1) in vec3 vc;"
-            "out vec3 color;"
+            "uniform mat4 proj, view;"
             "void main() {"
-            "   color = vc;"
-            "   gl_Position = vec4(vp, 1.0);"
+            "   gl_Position = proj * view * vec4(vp, 1.0);"
             "}";
 
     GLuint vs = glCreateShader(GL_VERTEX_SHADER);
@@ -168,10 +183,9 @@ int main() {
 
     const char *fragment_shader =
             "#version 410\n"
-            "in vec3 color;"
             "out vec4 frag_color;"
             "void main() {"
-            "   frag_color = vec4(color, 1.0);"
+            "   frag_color = vec4(1.0, 1.0, 1.0, 1.0);"
             "}";
 
     GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
@@ -181,14 +195,27 @@ int main() {
     GLuint shader_programme = glCreateProgram();
     glAttachShader(shader_programme, fs);
     glAttachShader(shader_programme, vs);
-    glBindAttribLocation(shader_programme, 0, "vp");
-    glBindAttribLocation(shader_programme, 1, "vc");
     glLinkProgram(shader_programme);
+
+    int projLocation = glGetUniformLocation(shader_programme, "proj");
+    int viewLocation = glGetUniformLocation(shader_programme, "view");
+
+    glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+//        const float radius = 10.0f;
+//        float camX = sin(glfwGetTime()) * radius;
+//        float camY = sin(glfwGetTime()) * radius;
+//        float camZ = cos(glfwGetTime()) * radius;
+//
+//        view = glm::lookAt(glm::vec3(camX, camY, camZ), cameraTarget, up);
+
         glUseProgram(shader_programme);
+
+        glUniformMatrix4fv(projLocation, 1, GL_FALSE, glm::value_ptr(proj));
+        glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
 
         Mesh *m = obj->getMesh();
 
@@ -198,8 +225,10 @@ int main() {
         }
 
         glfwPollEvents();
-
         glfwSwapBuffers(window);
+        if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_ESCAPE)) {
+            glfwSetWindowShouldClose(window, 1);
+        }
     }
 
     glfwTerminate();
