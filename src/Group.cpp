@@ -2,6 +2,7 @@
 
 Group::Group() {
     this->numOfVertices = 0;
+    this->VAO = 0;
 }
 Group::~Group() {}
 

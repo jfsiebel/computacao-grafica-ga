@@ -23,16 +23,13 @@
 #include "OBJReader.h"
 
 using namespace std;
-using namespace glm;
+//using namespace glm;
 
-bool firstMouse = true;
-float tyaw   = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
-float tpitch =  0.0f;
-float lastX =  WIDTH / 2.0;
-float lastY =  HEIGHT / 2.0;
-glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
-
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+struct Scene {
+    vector<Mesh *> objects;
+    vector<Obj3D *> items;
+    Obj3D * bulletObj;
+};
 
 int main() {
     if (!glfwInit()) {
@@ -54,7 +51,6 @@ int main() {
     }
 
     glfwMakeContextCurrent(window);
-    glfwSetCursorPosCallback(window, mouse_callback);
 
     glewExperimental = GL_TRUE;
     glewInit();
@@ -66,81 +62,98 @@ int main() {
     printf("OpenGL version: %s\n", version);
 
     glEnable(GL_DEPTH_TEST);
-    glClear(GL_DEPTH_BUFFER_BIT);
 
-    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.1f, 3.0f);
     glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
     glm::vec3 cameraDirection = glm::normalize(cameraTarget - cameraPos);
-//    glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+    glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
     glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
     glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
 
     glm::mat4 view(1.0f);
 
     glm::mat4 proj(1.0f);
-    proj = glm::perspective(glm::radians(60.0f), (float) WIDTH / (float) HEIGHT, 0.1f, 100.0f);
+    proj = glm::perspective(glm::radians(75.0f), (float) WIDTH / (float) HEIGHT, 0.1f, 100.0f);
+
+    Scene scene;
 
     OBJReader *objReader = new OBJReader();
 
     Mesh *mesa = objReader->read("../obj/mesa/mesa01.obj");
+    Mesh *tiro = objReader->read("../obj/sphere/sphere.obj");
+    Mesh *paintball = objReader->read("../obj/paintball/cenaPaintball.obj");
 
-    for (Group *g : mesa->getGroups()) {
-        vector<float> vs;
-        vector<float> vts;
-        vector<float> vns;
-        for (Face *f : g->getFaces()) {
-            for (int idx : f->getVerts()) {
-                glm::vec3 *vertex = mesa->getVertices()[idx];
+    scene.objects.push_back(mesa);
+    scene.objects.push_back(tiro);
+    scene.objects.push_back(paintball);
 
-                vs.push_back(vertex->x);
-                vs.push_back(vertex->y);
-                vs.push_back(vertex->z);
-            }
-            for (int idx : f->getTexts()) {
-                glm::vec2 *textures = mesa->getMappings()[idx];
+    GLuint VAO, VBOVertices, VBOTextures, VBONormals, Textures;
 
-                vts.push_back(textures->x);
-                vts.push_back(textures->y);
-            }
-            for (int idx : f->getNorms()) {
-                glm::vec3 *normals = mesa->getNormals()[idx];
+    for (Mesh *objCena : scene.objects) {
+        Obj3D *obj = new Obj3D();
+        obj->setMesh(objCena);
+        scene.items.push_back(obj);
 
-                vns.push_back(normals->x);
-                vns.push_back(normals->y);
-                vns.push_back(normals->z);
-            }
+        if (objCena == tiro) {
+            obj->setEliminavel(true);
+            obj->setIsVisible(false);
+            scene.bulletObj = obj;
         }
-        GLuint VAO, VBOVertices, VBOTextures, VBONormals;
-        glGenVertexArrays(1, &VAO);
-        glGenBuffers(1, &VBOVertices);
-        glGenBuffers(1, &VBOTextures);
-        glGenBuffers(1, &VBONormals);
 
-        glBindVertexArray(VAO);
+        for (Group *g : objCena->getGroups()) {
+            vector<float> vs;
+            vector<float> vts;
+            vector<float> vns;
+            for (Face *f : g->getFaces()) {
+                for (int idx : f->getVerts()) {
+                    glm::vec3 *vertex = objCena->getVertices()[idx];
 
-        glBindBuffer(GL_ARRAY_BUFFER, VBOVertices);
-        glBufferData(GL_ARRAY_BUFFER, vs.size() * sizeof(float), vs.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-        glEnableVertexAttribArray(0);
+                    vs.push_back(vertex->x);
+                    vs.push_back(vertex->y);
+                    vs.push_back(vertex->z);
+                }
+                for (int idx : f->getTexts()) {
+                    glm::vec2 *textures = objCena->getMappings()[idx];
 
-        glBindBuffer(GL_ARRAY_BUFFER, VBOTextures);
-        glBufferData(GL_ARRAY_BUFFER, vts.size() * sizeof(float), vts.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-        glEnableVertexAttribArray(1);
+                    vts.push_back(textures->x);
+                    vts.push_back(textures->y);
+                }
+                for (int idx : f->getNorms()) {
+                    glm::vec3 *normals = objCena->getNormals()[idx];
 
-        glBindBuffer(GL_ARRAY_BUFFER, VBONormals);
-        glBufferData(GL_ARRAY_BUFFER, vns.size() * sizeof(float), vns.data(), GL_STATIC_DRAW);
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-        glEnableVertexAttribArray(2);
+                    vns.push_back(normals->x);
+                    vns.push_back(normals->y);
+                    vns.push_back(normals->z);
+                }
+            }
+            glGenVertexArrays(1, &VAO);
+            glGenBuffers(1, &VBOVertices);
+            glGenBuffers(1, &VBOTextures);
+            glGenBuffers(1, &VBONormals);
 
-        g->setVAO(VAO);
+            glBindVertexArray(VAO);
+
+            glBindBuffer(GL_ARRAY_BUFFER, VBOVertices);
+            glBufferData(GL_ARRAY_BUFFER, vs.size() * sizeof(float), vs.data(), GL_STATIC_DRAW);
+            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+            glEnableVertexAttribArray(0);
+
+            glBindBuffer(GL_ARRAY_BUFFER, VBOTextures);
+            glBufferData(GL_ARRAY_BUFFER, vts.size() * sizeof(float), vts.data(), GL_STATIC_DRAW);
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+            glEnableVertexAttribArray(1);
+
+            glBindBuffer(GL_ARRAY_BUFFER, VBONormals);
+            glBufferData(GL_ARRAY_BUFFER, vns.size() * sizeof(float), vns.data(), GL_STATIC_DRAW);
+            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+            glEnableVertexAttribArray(2);
+
+            g->setVAO(VAO);
+        }
+
     }
-
-    Obj3D *obj = new Obj3D();
-
-    obj->setMesh(mesa);
 
     const char *vertex_shader =
             "#version 410\n"
@@ -170,6 +183,7 @@ int main() {
     glAttachShader(shader_programme, vs);
     glLinkProgram(shader_programme);
 
+    glm::mat4 model(1.0f);
     glm::mat4 scale(1.0f);
 
     int projLocation = glGetUniformLocation(shader_programme, "proj");
@@ -178,9 +192,11 @@ int main() {
 
     glClearColor(0.6f, 0.6f, 0.8f, 1.0f);
 
-    double cameraSpeed = 2.5f;
+    double cameraSpeed = 10.0f;
     double deltaTime = 0.0f;
     double lastFrame = 0.0f;
+    float yaw = -90.0f;
+    float pitch = 0.0f;
 
     while (!glfwWindowShouldClose(window)) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -192,24 +208,46 @@ int main() {
         if (GLFW_PRESS == glfwGetKey(window, GLFW_KEY_ESCAPE)) {
             glfwSetWindowShouldClose(window, 1);
         }
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
 //            cout << glm::to_string(cameraPos) << endl;
             cameraPos += cameraSpeed * deltaTime * cameraFront;
 //            cout << glm::to_string(cameraPos) << endl;
         }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-            cameraPos -= cameraSpeed * deltaTime  * cameraFront;
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
+            cameraPos -= cameraSpeed * deltaTime * cameraFront;
         }
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+//            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
+            glm::vec3 front(1.0f);
+            yaw -= 1.0f;
+            front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+            front.y = sin(glm::radians(pitch));
+            front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+            cameraFront = glm::normalize(front);
         }
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+//            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
+            glm::vec3 front(1.0f);
+            yaw += 1.0f;
+            front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+            front.y = sin(glm::radians(pitch));
+            front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+            cameraFront = glm::normalize(front);
+        }
+
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) {
+            scene.bulletObj->setIsVisible(true);
+            glm::vec3 min, max;
+            min = scene.bulletObj->getMesh()->getMin();
+            max = scene.bulletObj->getMesh()->getMax();
+            glm::vec3 medio = (min + max) / 2;
+            scene.bulletObj->setDirecao(cameraPos - medio);
+        }
+
         if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed * deltaTime;
+            cameraPos.z = 99.0f;
         }
 
-        Mesh *m = obj->getMesh();
-
-        float d = glm::distance(m->getMin(), m->getMax());
 
         glUseProgram(shader_programme);
 
@@ -218,52 +256,34 @@ int main() {
         view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glUniformMatrix4fv(viewLocation, 1, GL_FALSE, glm::value_ptr(view));
 
-        scale = glm::scale(glm::mat4(1.0f), glm::vec3(1.0f / d, 1.0f / d, 1.0f / d));
-        glUniformMatrix4fv(scaleLocation, 1, GL_FALSE, glm::value_ptr(scale));
+        for (Obj3D *obj : scene.items) {
+            if (obj->getIsVisible()) {
+                Mesh *m = obj->getMesh();
+                float d = glm::distance(m->getMin(), m->getMax());
 
-        for (Group *g : m->getGroups()) {
-            glBindVertexArray(g->getVAO());
-            glDrawArrays(GL_TRIANGLES, 0, g->getNumOfVertices());
+                if (obj == scene.bulletObj) {
+                    obj->setDirecao(obj->getDirecao() + (cameraDirection * 2.0f * deltaTime));
+
+                    cout << obj->getDirecao().z << endl;
+                }
+
+
+                glm::mat4 translate = glm::translate(model, obj->getDirecao());
+
+//                scale = glm::scale(translate, glm::vec3(1.0f / d, 1.0f / d, 1.0f / d));
+                scale = glm::scale(translate, glm::vec3(1.0f));
+                glUniformMatrix4fv(scaleLocation, 1, GL_FALSE, glm::value_ptr(scale));
+                for (Group *g : m->getGroups()) {
+                    glBindVertexArray(g->getVAO());
+                    glDrawArrays(GL_TRIANGLES, 0, g->getNumOfVertices());
+                }
+            }
         }
 
-        glfwPollEvents();
         glfwSwapBuffers(window);
+        glfwPollEvents();
     }
 
     glfwTerminate();
     return 0;
-}
-
-void mouse_callback(GLFWwindow* window, double xpos, double ypos)
-{
-    if (firstMouse)
-    {
-        lastX = xpos;
-        lastY = ypos;
-        firstMouse = false;
-    }
-
-    float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-    lastX = xpos;
-    lastY = ypos;
-
-    float sensitivity = 0.1f; // change this value to your liking
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    tyaw += xoffset;
-    tpitch += yoffset;
-
-    // make sure that when pitch is out of bounds, screen doesn't get flipped
-    if (tpitch > 89.0f)
-        tpitch = 89.0f;
-    if (tpitch < -89.0f)
-        tpitch = -89.0f;
-
-    glm::vec3 front;
-    front.x = cos(glm::radians(tyaw)) * cos(glm::radians(tpitch));
-    front.y = sin(glm::radians(tpitch));
-    front.z = sin(glm::radians(tyaw)) * cos(glm::radians(tpitch));
-    cameraFront = glm::normalize(front);
 }

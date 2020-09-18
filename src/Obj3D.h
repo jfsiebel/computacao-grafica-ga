@@ -11,6 +11,7 @@ class Obj3D
 private:
     bool eliminavel;
     glm::vec3 direcao;
+    bool isVisible;
     Mesh *mesh;
     int status;
     glm::mat4 transform;
@@ -21,12 +22,14 @@ public:
 
     bool getEliminavel();
     glm::vec3 getDirecao();
+    bool getIsVisible();
     Mesh *getMesh();
     int getStatus();
     glm::mat4 getTransform();
 
     void setEliminavel(bool eliminavel);
     void setDirecao(glm::vec3 direcao);
+    void setIsVisible(bool isVisible);
     void setMesh(Mesh *mesh);
     void setStatus(int status);
     void setTransform(glm::mat4 transform);
