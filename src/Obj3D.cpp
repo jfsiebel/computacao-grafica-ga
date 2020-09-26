@@ -4,7 +4,6 @@ Obj3D::Obj3D() {
     this->eliminavel = false;
     this->isVisible = true;
     this->transform = glm::mat4(1.0f);
-    this->direcao = glm::vec3(1.0f);
 };
 
 Obj3D::~Obj3D() {};
