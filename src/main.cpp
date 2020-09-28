@@ -376,7 +376,6 @@ int main() {
                 glm::mat4 translate = obj->getTransform();
 
                 if (obj == scene.bulletObj) {
-                    cout << obj->getIsVisible() << endl;
                     translate = glm::translate(translate, obj->getDirecao() * deltaTime * bulletSpeed);
 
                     obj->setTransform(translate);
@@ -428,13 +427,21 @@ int main() {
 //                        cout << "sum: " << (bulletRadius + objRadius) << endl;
 
                         if (collisionDistance < (bulletRadius + objRadius)) {
-                            cout << "Colisão: " << glm::to_string(objP) << endl;
                             if ( obj->getEliminavel() ) {
                                 obj->setIsVisible(false);
                                 scene.bulletObj->setIsVisible(false);
                                 continue;
                             } else {
-                                // fazer reflexão do objeto
+                                glm::vec3 collisionNormal = (objP - objCenter)/objRadius;
+
+                                float dot = glm::dot(collisionNormal, bulletPosition);
+
+//                                glm::vec3 rOut = 2 * collisionNormal * dot - bulletPosition;
+
+                                float rX = 2 * collisionNormal.x * dot - bulletPosition.x;
+                                float rZ = 2 * collisionNormal.z * dot - bulletPosition.z;
+
+                                scene.bulletObj->setDirecao(glm::vec3(rX, bulletPosition.y, rZ));
                             }
                         }
                     }
@@ -448,7 +455,6 @@ int main() {
                         Material * groupMaterial = scene.materials.find(g->getMaterial())->second;
                         glBindTexture(GL_TEXTURE_2D, groupMaterial->getTID());
                     }
-//                    glBindTexture(GL_TEXTURE_2D, VBOMaterial);
                     glDrawArrays(GL_TRIANGLES, 0, g->getNumOfVertices());
                 }
             }
@@ -461,10 +467,3 @@ int main() {
     glfwTerminate();
     return 0;
 }
-
-
-// TODO
-/**
- * Dar handle em obj que vem com 4 pontos. (trout)
- * Fazer colisão
- * */
