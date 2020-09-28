@@ -150,7 +150,7 @@ Mesh *OBJReader::read(std::string filename) {
             mesh->addNormal(new glm::vec3(x, y, z));
         } else if (instruction == "f") {
             Face *f = new Face();
-
+            int vertexQtd = 0;
             while (!ss.eof()) {
                 string token;
                 ss >> token;
@@ -161,6 +161,7 @@ Mesh *OBJReader::read(std::string filename) {
 
                 ssToken << token;
 
+                vertexQtd++;
                 string vertex, texture, normal;
 
                 getline(ssToken, vertex, '/');
@@ -181,7 +182,56 @@ Mesh *OBJReader::read(std::string filename) {
                     f->addNorm(i);
                 }
             }
-            group->addFace(f);
+
+            // Obj possui um retângulo
+            if (vertexQtd > 3) {
+//                1 ---- 2
+//                |      |
+//                4 ---- 3
+//
+//                1->2->3  1->3->4
+
+                vector<int> verts = f->getVerts();
+                vector<int> textures = f->getTexts();
+                vector<int> normals = f->getNorms();
+
+                //Quebra um retângulo em 2 triângulos
+                Face *f1 = new Face();
+
+                f1->addVert(verts[0]);
+                f1->addVert(verts[1]);
+                f1->addVert(verts[2]);
+
+                Face *f2 = new Face();
+                f2->addVert(verts[0]);
+                f2->addVert(verts[2]);
+                f2->addVert(verts[3]);
+
+                if (textures.size()) {
+                    f1->addText(textures[0]);
+                    f1->addText(textures[1]);
+                    f1->addText(textures[2]);
+
+                    f2->addText(textures[0]);
+                    f2->addText(textures[2]);
+                    f2->addText(textures[3]);
+                }
+
+                if (normals.size()) {
+                    f1->addNorm(normals[0]);
+                    f1->addNorm(normals[1]);
+                    f1->addNorm(normals[2]);
+
+                    f2->addNorm(normals[0]);
+                    f2->addNorm(normals[2]);
+                    f2->addNorm(normals[3]);
+                }
+
+                group->addFace(f1);
+                group->addFace(f2);
+            } else {
+                group->addFace(f);
+            }
         }
     }
     arq.close();

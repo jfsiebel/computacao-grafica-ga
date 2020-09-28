@@ -65,6 +65,8 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
+    glEnable (GL_BLEND);
+    glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     Scene scene;
 
@@ -81,6 +83,7 @@ int main() {
     int qtdObj = 0;
 
     ifstream arq("../src/config.cfg");
+//    ifstream arq("../src/bkp.cfg");
 
     while (!arq.eof()) {
         stringstream ss;
@@ -126,25 +129,26 @@ int main() {
                      * Ler mtl e gerar os materials
                      * */
 
-//                    if (!m->getMtllib().empty()) {
-//                        vector<Material *> materials = objReader->readMaterials(BASE_OBJ_PATH + m->getMtllib());
-//
-//                        for (Material *material : materials) {
-//                            glGenTextures(1, &VBOMaterial);
-//                            glBindTexture(GL_TEXTURE_2D, VBOMaterial);
-//
-//                            int imgWidth, imgHeight, nrChannels;
-//                            unsigned char *data = stbi_load(material->getMapKd().c_str(), &imgWidth, &imgHeight, &nrChannels, 0);
-//
-//                            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-//                            glGenerateMipmap(GL_TEXTURE_2D);
-//                            stbi_image_free(data);
-//
-//                            material->setTID(VBOMaterial);
-//
-//                            scene.materials.insert({ material->getId(), material });
-//                        }
-//                    }
+                    if (!m->getMtllib().empty()) {
+                        vector<Material *> materials = objReader->readMaterials(BASE_OBJ_PATH + m->getMtllib());
+
+                        for (Material *material : materials) {
+                            glGenTextures(1, &VBOMaterial);
+                            glBindTexture(GL_TEXTURE_2D, VBOMaterial);
+
+                            int imgWidth, imgHeight, nrChannels;
+                            string imgPath =  BASE_OBJ_PATH + material->getMapKd();
+                            unsigned char *data = stbi_load(imgPath.c_str(), &imgWidth, &imgHeight, &nrChannels, 0);
+
+                            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+                            glGenerateMipmap(GL_TEXTURE_2D);
+                            stbi_image_free(data);
+
+                            material->setTID(VBOMaterial);
+
+                            scene.materials.insert({ material->getId(), material });
+                        }
+                    }
 
                     scene.malhas.insert({label, m});
 
@@ -154,20 +158,20 @@ int main() {
                         vector<float> vns;
                         for (Face *f : g->getFaces()) {
                             for (int idx : f->getVerts()) {
-                                glm::vec3 *vertex = m->getVertices()[idx];
+                                glm::vec3 *vertex = m->getVertices().at(idx);
 
                                 vs.push_back(vertex->x);
                                 vs.push_back(vertex->y);
                                 vs.push_back(vertex->z);
                             }
                             for (int idx : f->getTexts()) {
-                                glm::vec2 *textures = m->getMappings()[idx];
+                                glm::vec2 *textures = m->getMappings().at(idx);
 
                                 vts.push_back(textures->x);
                                 vts.push_back(textures->y);
                             }
                             for (int idx : f->getNorms()) {
-                                glm::vec3 *normals = m->getNormals()[idx];
+                                glm::vec3 *normals = m->getNormals().at(idx);
 
                                 vns.push_back(normals->x);
                                 vns.push_back(normals->y);
@@ -181,20 +185,20 @@ int main() {
 
                         glBindVertexArray(VAO);
 
-                        glEnableVertexAttribArray(0);
                         glBindBuffer(GL_ARRAY_BUFFER, VBOVertices);
-                        glBufferData(GL_ARRAY_BUFFER, vs.size() * sizeof(float), vs.data(), GL_STATIC_DRAW);
+                        glBufferData(GL_ARRAY_BUFFER, vs.size() * sizeof(GL_FLOAT), vs.data(), GL_STATIC_DRAW);
                         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+                        glEnableVertexAttribArray(0);
 
-                        glEnableVertexAttribArray(1);
                         glBindBuffer(GL_ARRAY_BUFFER, VBOTextures);
-                        glBufferData(GL_ARRAY_BUFFER, vts.size() * sizeof(float), vts.data(), GL_STATIC_DRAW);
+                        glBufferData(GL_ARRAY_BUFFER, vts.size() * sizeof(GL_FLOAT), vts.data(), GL_STATIC_DRAW);
                         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+                        glEnableVertexAttribArray(1);
 
-                        glEnableVertexAttribArray(2);
                         glBindBuffer(GL_ARRAY_BUFFER, VBONormals);
-                        glBufferData(GL_ARRAY_BUFFER, vns.size() * sizeof(float), vns.data(), GL_STATIC_DRAW);
+                        glBufferData(GL_ARRAY_BUFFER, vns.size() * sizeof(GL_FLOAT), vns.data(), GL_STATIC_DRAW);
                         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+                        glEnableVertexAttribArray(2);
 
                         g->setVAO(VAO);
                     }
@@ -235,25 +239,26 @@ int main() {
     }
     arq.close();
 
-    glGenTextures(1, &VBOMaterial);
-    glBindTexture(GL_TEXTURE_2D, VBOMaterial);
-
-    int imgWidth, imgHeight, nrChannels;
-    unsigned char *data = stbi_load("../obj/mesa/mesa01.bmp", &imgWidth, &imgHeight, &nrChannels, 0);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    stbi_image_free(data);
+//    glGenTextures(1, &VBOMaterial);
+//    glBindTexture(GL_TEXTURE_2D, VBOMaterial);
+//
+//    int imgWidth, imgHeight, nrChannels;
+//    unsigned char *data = stbi_load("../obj/mesa/mesa01.bmp", &imgWidth, &imgHeight, &nrChannels, 0);
+//
+//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+//    glGenerateMipmap(GL_TEXTURE_2D);
+//    stbi_image_free(data);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     const char *vertex_shader =
             "#version 410\n"
             "layout(location=0) in vec3 vp;"
             "layout(location=1) in vec2 vt;"
+            "layout(location=2) in vec3 vn;"
             "uniform mat4 proj, model, view;"
             "out vec2 texCoord;"
             "void main() {"
@@ -439,11 +444,11 @@ int main() {
                 glUniformMatrix4fv(modelLocation, 1, GL_FALSE, glm::value_ptr(model));
                 for (Group *g : m->getGroups()) {
                     glBindVertexArray(g->getVAO());
-//                    if (!g->getMaterial().empty()) {
-//                        Material * groupMaterial = scene.materials.find(g->getMaterial())->second;
-//                        glBindTexture(GL_TEXTURE_2D, groupMaterial->getTID());
-//                    }
-                    glBindTexture(GL_TEXTURE_2D, VBOMaterial);
+                    if (!g->getMaterial().empty()) {
+                        Material * groupMaterial = scene.materials.find(g->getMaterial())->second;
+                        glBindTexture(GL_TEXTURE_2D, groupMaterial->getTID());
+                    }
+//                    glBindTexture(GL_TEXTURE_2D, VBOMaterial);
                     glDrawArrays(GL_TRIANGLES, 0, g->getNumOfVertices());
                 }
             }
