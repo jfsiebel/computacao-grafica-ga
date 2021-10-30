@@ -83,7 +83,6 @@ int main() {
     int qtdObj = 0;
 
     ifstream arq("../src/config.cfg");
-//    ifstream arq("../src/bkp.cfg");
 
     while (!arq.eof()) {
         stringstream ss;
@@ -239,16 +238,6 @@ int main() {
     }
     arq.close();
 
-//    glGenTextures(1, &VBOMaterial);
-//    glBindTexture(GL_TEXTURE_2D, VBOMaterial);
-//
-//    int imgWidth, imgHeight, nrChannels;
-//    unsigned char *data = stbi_load("../obj/mesa/mesa01.bmp", &imgWidth, &imgHeight, &nrChannels, 0);
-//
-//    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, imgWidth, imgHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-//    glGenerateMipmap(GL_TEXTURE_2D);
-//    stbi_image_free(data);
-
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -393,18 +382,12 @@ int main() {
 
                         float bulletDistance = glm::distance(bulletMin, bulletMax);
                         glm::mat4 bulletModel = glm::scale(bullet->getTransform(),
-                                                           glm::vec3(1.0f / bulletDistance, 1.0f / bulletDistance,
-                                                                     1.0f / bulletDistance));
+                        glm::vec3(1.0f / bulletDistance, 1.0f / bulletDistance,
+                        1.0f / bulletDistance));
                         glm::vec3 bulletP0 = glm::vec3(bulletModel * glm::vec4(bulletMin, 1.0f));
                         glm::vec3 bulletP1 = glm::vec3(bulletModel * glm::vec4(bulletMax, 1.0f));
                         glm::vec3 bulletCenter = (bulletP0 + bulletP1) / 2;
                         float bulletRadius = glm::distance(bulletP0, bulletP1) / 2;
-
-//                        cout << "bulletDistance: " << bulletDistance << endl;
-//                        cout << "bulletP0: " << glm::to_string(bulletP0) << endl;
-//                        cout << "bulletP1: " << glm::to_string(bulletP1) << endl;
-//                        cout << "bulletCenter: " << glm::to_string(bulletCenter) << endl;
-//                        cout << "bulletRadius: " << bulletRadius << endl;
 
                         glm::mat4 objModel = glm::scale(obj->getTransform(), glm::vec3(1.0f / d, 1.0f / d, 1.0f / d));
                         glm::vec3 objP0 = glm::vec3(objModel * glm::vec4(m->getMin(), 1.0f));
@@ -414,17 +397,7 @@ int main() {
                         glm::vec3 objVp = objCenter - bulletCenter;
                         glm::vec3 objP = glm::normalize(objVp) * bulletRadius + bulletCenter;
 
-//                        cout << "objP0: " << glm::to_string(objP0) << endl;
-//                        cout << "objP1: " << glm::to_string(objP1) << endl;
-//                        cout << "objCenter: " << glm::to_string(objCenter) << endl;
-//                        cout << "objRadius: " << objRadius << endl;
-//                        cout << "objVp: " << glm::to_string(objVp) << endl;
-//                        cout << "objP: " << glm::to_string(objP) << endl;
-
                         float collisionDistance = glm::distance(objCenter, bulletCenter);
-
-//                        cout << "collisionDistance: " << collisionDistance << endl;
-//                        cout << "sum: " << (bulletRadius + objRadius) << endl;
 
                         if (collisionDistance < (bulletRadius + objRadius)) {
                             if ( obj->getEliminavel() ) {
@@ -435,8 +408,6 @@ int main() {
                                 glm::vec3 collisionNormal = (objP - objCenter)/objRadius;
 
                                 float dot = glm::dot(collisionNormal, bulletPosition);
-
-//                                glm::vec3 rOut = 2 * collisionNormal * dot - bulletPosition;
 
                                 float rX = 2 * collisionNormal.x * dot - bulletPosition.x;
                                 float rZ = 2 * collisionNormal.z * dot - bulletPosition.z;
